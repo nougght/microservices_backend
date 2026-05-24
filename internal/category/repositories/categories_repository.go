@@ -4,6 +4,7 @@ import (
 	"context"
 	"store-server/internal/category/models"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -37,7 +38,7 @@ func (r *CategoryRepository) UpdateCategory(ctx context.Context, category *model
 	return err
 }
 
-func (r *CategoryRepository) DeleteCategory(ctx context.Context, id string) error {
+func (r *CategoryRepository) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 	query := "DELETE FROM categories.categories WHERE id = $1"
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err

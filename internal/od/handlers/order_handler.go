@@ -7,23 +7,22 @@ import (
 	"store-server/internal/od/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type OrderHandler struct {
 	orderService      *services.OrderService
 	orderItemsService *services.OrderItemsService
 	deliveryService   *services.DeliveryService
-	tools             *models.Tools
 }
 
 func NewOrderHandler(orderService *services.OrderService, orderItemsService *services.OrderItemsService, deliveryService *services.DeliveryService) *OrderHandler {
-	return &OrderHandler{orderService: orderService, orderItemsService: orderItemsService, deliveryService: deliveryService, tools: &models.Tools{}}
+	return &OrderHandler{orderService: orderService, orderItemsService: orderItemsService, deliveryService: deliveryService}
 }
 
 func (h *OrderHandler) GetOrderByID(c *gin.Context) {
-	id := c.Param("id")
-
-	if !h.tools.IsValidUUID(id) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -38,9 +37,8 @@ func (h *OrderHandler) GetOrderByID(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
-	userID := c.Param("user_id")
-
-	if !h.tools.IsValidUUID(userID) {
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -71,9 +69,8 @@ func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetActiveOrdersByUserID(c *gin.Context) {
-	userID := c.Param("user_id")
-
-	if !h.tools.IsValidUUID(userID) {
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -130,9 +127,8 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 }
 
 func (h *OrderHandler) UpdateOrder(c *gin.Context) {
-	id := c.Param("id")
-
-	if !h.tools.IsValidUUID(id) {
+	_, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -151,7 +147,11 @@ func (h *OrderHandler) UpdateOrder(c *gin.Context) {
 }
 
 func (h *OrderHandler) DeleteOrder(c *gin.Context) {
-	id := c.Param("id")
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
 	if err := h.orderService.DeleteOrder(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

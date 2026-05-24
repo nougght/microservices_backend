@@ -6,21 +6,20 @@ import (
 	"store-server/internal/od/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type DeliveryHandler struct {
 	service *services.DeliveryService
-	tools   *models.Tools
 }
 
 func NewDeliveryHandler(service *services.DeliveryService) *DeliveryHandler {
-	return &DeliveryHandler{service: service, tools: &models.Tools{}}
+	return &DeliveryHandler{service: service}
 }
 
 func (h *DeliveryHandler) GetDeliveryByID(c *gin.Context) {
-	id := c.Param("id")
-
-	if !h.tools.IsValidUUID(id) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -35,9 +34,8 @@ func (h *DeliveryHandler) GetDeliveryByID(c *gin.Context) {
 }
 
 func (h *DeliveryHandler) GetDeliveryByOrderID(c *gin.Context) {
-	orderID := c.Param("id")
-
-	if !h.tools.IsValidUUID(orderID) {
+	orderID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -67,9 +65,8 @@ func (h *DeliveryHandler) CreateDelivery(c *gin.Context) {
 }
 
 func (h *DeliveryHandler) UpdateDelivery(c *gin.Context) {
-	id := c.Param("id")
-
-	if !h.tools.IsValidUUID(id) {
+	_, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -88,7 +85,11 @@ func (h *DeliveryHandler) UpdateDelivery(c *gin.Context) {
 }
 
 func (h *DeliveryHandler) DeleteDelivery(c *gin.Context) {
-	id := c.Param("id")
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
 	if err := h.service.DeleteDelivery(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

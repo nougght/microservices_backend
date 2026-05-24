@@ -2,25 +2,24 @@ package handlers
 
 import (
 	"net/http"
-	"store-server/internal/cart/models"
 	"store-server/internal/cart/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type CartHandler struct {
 	service *services.CartService
-	tools   *models.Tools
 }
 
 func NewCartHandler(service *services.CartService) *CartHandler {
-	return &CartHandler{service: service, tools: &models.Tools{}}
+	return &CartHandler{service: service}
 }
 
 func (h *CartHandler) GetCart(c *gin.Context) {
-	userID := c.Param("user_id")
-	if !h.tools.IsValidUUID(userID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID" + userID})
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
 		return
 	}
 
@@ -34,9 +33,9 @@ func (h *CartHandler) GetCart(c *gin.Context) {
 }
 
 func (h *CartHandler) CreateCart(c *gin.Context) {
-	userID := c.Param("user_id")
-	if !h.tools.IsValidUUID(userID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID" + userID})
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
 		return
 	}
 

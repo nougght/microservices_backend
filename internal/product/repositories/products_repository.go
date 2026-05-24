@@ -7,6 +7,7 @@ import (
 
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -29,7 +30,7 @@ func (r *ProductsRepository) GetProducts(ctx context.Context) ([]models.Product,
 	return products, nil
 }
 
-func (r *ProductsRepository) GetProductByIDs(ctx context.Context, ids []string) ([]models.Product, error) {
+func (r *ProductsRepository) GetProductByIDs(ctx context.Context, ids []uuid.UUID) ([]models.Product, error) {
 	var products []models.Product
 	query := `SELECT * FROM products.products WHERE id = ANY($1)
 	ORDER BY array_position($1, id)`
@@ -62,7 +63,7 @@ func (r *ProductsRepository) CreateProduct(ctx context.Context, product models.P
 	return err
 }
 
-func (r *ProductsRepository) DeleteProduct(ctx context.Context, id string) error {
+func (r *ProductsRepository) DeleteProduct(ctx context.Context, id uuid.UUID) error {
 	query := "DELETE FROM products.products WHERE id = $1"
 	_, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -72,7 +73,7 @@ func (r *ProductsRepository) DeleteProduct(ctx context.Context, id string) error
 	return nil
 }
 
-func (r *ProductsRepository) UpdateProduct(ctx context.Context, id string, product models.Product) error {
+func (r *ProductsRepository) UpdateProduct(ctx context.Context, id uuid.UUID, product models.Product) error {
 	query := `UPDATE products.products
 	SET name = $2, description = $3, price = $4, category_id = $5,  quantity = $6, unit = $7, stock = $8, is_active = $9
 	WHERE id = $1`

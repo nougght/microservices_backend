@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"store-server/internal/auth/models"
 	"store-server/internal/auth/services"
-	"store-server/internal/auth/tools"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type FavouriteItemsHandler struct {
@@ -19,9 +19,9 @@ func NewFavouriteItemsHandler(service *services.FavouriteItemsService) *Favourit
 }
 
 func (h *FavouriteItemsHandler) AddToFavourites(c *gin.Context) {
-	userID := c.Param("user_id")
-	if !tools.IsValidUUID(userID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID" + userID})
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
 		return
 	}
 
@@ -31,6 +31,12 @@ func (h *FavouriteItemsHandler) AddToFavourites(c *gin.Context) {
 		return
 	}
 	item.UserID = userID
+	productID, err := uuid.Parse(c.Param("product_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product ID"})
+		return
+	}
+	item.ProductID = productID
 
 	if err := h.service.AddToFavourites(c.Request.Context(), &item); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add item to favourites" + err.Error()})
@@ -40,9 +46,9 @@ func (h *FavouriteItemsHandler) AddToFavourites(c *gin.Context) {
 }
 
 func (h *FavouriteItemsHandler) GetFavouritesByUserID(c *gin.Context) {
-	userID := c.Param("user_id")
-	if !tools.IsValidUUID(userID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID" + userID})
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
 		return
 	}
 
@@ -56,10 +62,14 @@ func (h *FavouriteItemsHandler) GetFavouritesByUserID(c *gin.Context) {
 }
 
 func (h *FavouriteItemsHandler) DeleteFromFavourites(c *gin.Context) {
-	userID := c.Param("user_id")
-	productID := c.Param("product_id")
-	if !tools.IsValidUUID(userID) || !tools.IsValidUUID(productID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID or product ID"})
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		return
+	}
+	productID, err := uuid.Parse(c.Param("product_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product ID"})
 		return
 	}
 

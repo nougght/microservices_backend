@@ -6,15 +6,15 @@ import (
 	"store-server/internal/cart/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type CartItemsHandler struct {
 	service *services.CartItemsService
-	tools   *models.Tools
 }
 
 func NewCartItemsHandler(service *services.CartItemsService) *CartItemsHandler {
-	return &CartItemsHandler{service: service, tools: &models.Tools{}}
+	return &CartItemsHandler{service: service}
 }
 
 func (h *CartItemsHandler) AddToCart(c *gin.Context) {
@@ -32,9 +32,9 @@ func (h *CartItemsHandler) AddToCart(c *gin.Context) {
 }
 
 func (h *CartItemsHandler) GetCartItemsByCartID(c *gin.Context) {
-	cartID := c.Param("cart_id")
-	if !h.tools.IsValidUUID(cartID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cart ID" + cartID})
+	cartID, err := uuid.Parse(c.Param("cart_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cart ID"})
 		return
 	}
 
@@ -56,12 +56,13 @@ func (h *CartItemsHandler) UpdateCartItemQuantity(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input" + err.Error()})
 		return
 	}
-	if !h.tools.IsValidUUID(input.ID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID" + input.ID})
+	id, err := uuid.Parse(input.ID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID"})
 		return
 	}
 
-	if err := h.service.UpdateCartItemQuantity(c.Request.Context(), input.ID, input.Quantity); err != nil {
+	if err := h.service.UpdateCartItemQuantity(c.Request.Context(), id, input.Quantity); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update item quantity" + err.Error()})
 		return
 	}
@@ -70,9 +71,9 @@ func (h *CartItemsHandler) UpdateCartItemQuantity(c *gin.Context) {
 }
 
 func (h *CartItemsHandler) DeleteFromCartById(c *gin.Context) {
-	itemID := c.Param("id")
-	if !h.tools.IsValidUUID(itemID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID" + itemID})
+	itemID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID"})
 		return
 	}
 
@@ -100,7 +101,17 @@ func (h *CartItemsHandler) DeleteItemsByIDs(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteItemsByIDs(c.Request.Context(), input.IDs); err != nil {
+	uuids := make([]uuid.UUID, len(input.IDs))
+	for i, idStr := range input.IDs {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID"})
+			return
+		}
+		uuids[i] = id
+	}
+
+	if err := h.service.DeleteItemsByIDs(c.Request.Context(), uuids); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete items from cart" + err.Error()})
 		return
 	}

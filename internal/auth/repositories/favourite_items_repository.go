@@ -4,6 +4,7 @@ import (
 	"context"
 	"store-server/internal/auth/models"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -20,7 +21,7 @@ func (r *FavouriteItemsRepository) AddToFavourites(ctx context.Context, item *mo
 	return r.db.QueryRowxContext(ctx, query, item.UserID, item.ProductID).StructScan(item)
 }
 
-func (r *FavouriteItemsRepository) GetFavouritesByUserID(ctx context.Context, userID string) ([]models.FavouriteItem, error) {
+func (r *FavouriteItemsRepository) GetFavouritesByUserID(ctx context.Context, userID uuid.UUID) ([]models.FavouriteItem, error) {
 	var favouriteItems []models.FavouriteItem
 
 	err := r.db.SelectContext(ctx, &favouriteItems, "SELECT * FROM auth.user_favourites WHERE user_id = $1 ORDER BY created_at ASC", userID)
@@ -33,7 +34,7 @@ func (r *FavouriteItemsRepository) GetFavouritesByUserID(ctx context.Context, us
 	return favouriteItems, nil
 }
 
-func (r *FavouriteItemsRepository) DeleteFromFavourites(ctx context.Context, userID, productID string) error {
+func (r *FavouriteItemsRepository) DeleteFromFavourites(ctx context.Context, userID, productID uuid.UUID) error {
 	query := `DELETE FROM auth.user_favourites WHERE user_id = $1 AND product_id = $2`
 	_, err := r.db.ExecContext(ctx, query, userID, productID)
 

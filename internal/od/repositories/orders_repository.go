@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"store-server/internal/od/models"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -16,7 +17,7 @@ func NewOrderRepository(db *sqlx.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
 
-func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID string) ([]models.Order, error) {
+func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]models.Order, error) {
 	var orders []models.Order
 	query := `SELECT * FROM OD.orders WHERE user_id = $1`
 	err := r.db.SelectContext(ctx, &orders, query, userID)
@@ -27,7 +28,7 @@ func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID string) 
 	return orders, nil
 }
 
-func (r *OrderRepository) GetActiveOrdersByUserID(ctx context.Context, userID string) ([]models.Order, error) {
+func (r *OrderRepository) GetActiveOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]models.Order, error) {
 	var orders []models.Order
 	query := `SELECT * FROM OD.orders WHERE user_id = $1 AND status != 'cancelled' AND status != 'completed'`
 	err := r.db.SelectContext(ctx, &orders, query, userID)
@@ -57,17 +58,17 @@ func (r *OrderRepository) GetAllOrders(ctx context.Context, status string) ([]mo
 	}
 	return orders, nil
 }
-func (r *OrderRepository) CreateOrder(ctx context.Context, order *models.Order) (string, error) {
+func (r *OrderRepository) CreateOrder(ctx context.Context, order *models.Order) (uuid.UUID, error) {
 	query := `INSERT INTO OD.orders (user_id, status, total_price, delivery_price, payment_method, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	// var orderID string
+	// var orderID uuid.UUID
 	err := r.db.QueryRowxContext(ctx, query, order.UserID, order.Status, order.TotalPrice, order.DeliveryPrice, order.PaymentMethod, order.CreatedAt, order.UpdatedAt).Scan(&order.ID)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 	return order.ID, nil
 }
 
-func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (*models.Order, error) {
+func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID uuid.UUID) (*models.Order, error) {
 	var order models.Order
 	query := `SELECT * FROM OD.orders WHERE id = $1`
 	err := r.db.GetContext(ctx, &order, query, orderID)
@@ -86,7 +87,7 @@ func (r *OrderRepository) UpdateOrder(ctx context.Context, order *models.Order) 
 	return nil
 }
 
-func (r *OrderRepository) DeleteOrder(ctx context.Context, orderID string) error {
+func (r *OrderRepository) DeleteOrder(ctx context.Context, orderID uuid.UUID) error {
 	query := `DELETE FROM OD.orders WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, orderID)
 	if err != nil {

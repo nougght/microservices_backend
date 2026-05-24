@@ -5,6 +5,8 @@ import (
 
 	"store-server/internal/od/models"
 	"store-server/internal/od/repositories"
+
+	"github.com/google/uuid"
 )
 
 type DeliveryService struct {
@@ -15,15 +17,15 @@ func NewDeliveryService(repo *repositories.DeliveryRepository) *DeliveryService 
 	return &DeliveryService{repo: repo}
 }
 
-func (s *DeliveryService) CreateDelivery(ctx context.Context, delivery *models.Delivery) (string, error) {
+func (s *DeliveryService) CreateDelivery(ctx context.Context, delivery *models.Delivery) (uuid.UUID, error) {
 	return s.repo.CreateDelivery(ctx, delivery)
 }
 
-func (s *DeliveryService) GetDeliveryByOrderID(ctx context.Context, orderID string) (*models.Delivery, error) {
+func (s *DeliveryService) GetDeliveryByOrderID(ctx context.Context, orderID uuid.UUID) (*models.Delivery, error) {
 	return s.repo.GetDeliveryByOrderID(ctx, orderID)
 }
 
-func (s *DeliveryService) GetDeliveryByID(ctx context.Context, ID string) (*models.Delivery, error) {
+func (s *DeliveryService) GetDeliveryByID(ctx context.Context, ID uuid.UUID) (*models.Delivery, error) {
 	return s.repo.GetDeliveryByID(ctx, ID)
 }
 
@@ -31,6 +33,6 @@ func (s *DeliveryService) UpdateDelivery(ctx context.Context, delivery *models.D
 	return s.repo.UpdateDelivery(ctx, delivery)
 }
 
-func (s *DeliveryService) DeleteDelivery(ctx context.Context, ID string) error {
+func (s *DeliveryService) DeleteDelivery(ctx context.Context, ID uuid.UUID) error {
 	return s.repo.DeleteDelivery(ctx, ID)
 }

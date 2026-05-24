@@ -2,14 +2,15 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"store-server/internal/auth/models"
 	"store-server/internal/auth/services"
-	"strings"
 
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type AuthHandler struct {
@@ -46,7 +47,11 @@ func (s *AuthHandler) CheckUserExists(ctx *gin.Context) {
 }
 
 func (s *AuthHandler) GetUser(ctx *gin.Context) {
-	userID := ctx.Param("user_id")
+	userID, err := uuid.Parse(ctx.Param("user_id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
 	user, err := s.service.GetUserByID(ctx, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -57,9 +62,11 @@ func (s *AuthHandler) GetUser(ctx *gin.Context) {
 
 func (s *AuthHandler) SendCode(ctx *gin.Context) {
 	var code models.AuthCode
+	// body, _ := io.ReadAll(ctx.Request.Body)
+	// fmt.Println("body", string(body))
 	err := ctx.ShouldBindJSON(&code)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"json encoding error": err.Error()})
 		return
 	}
 	code.ExpiresAt = time.Now().Add(time.Minute * 5)
@@ -95,7 +102,11 @@ func (s *AuthHandler) VerifyCode(ctx *gin.Context) {
 }
 
 func (s *AuthHandler) GetUserSession(ctx *gin.Context) {
-	userID := ctx.Param("user_id")
+	userID, err := uuid.Parse(ctx.Param("user_id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
 	session, err := s.service.GetSessionByUserID(ctx, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -123,7 +134,12 @@ func (s *AuthHandler) Register(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"session": session, "user": user})
+	accessToken, err := s.service.GenerateAccessToken(ctx, session.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"session": session, "user": user, "access_token": accessToken})
 }
 
 func (s *AuthHandler) LogIn(ctx *gin.Context) {
@@ -153,12 +169,21 @@ func (s *AuthHandler) LogIn(ctx *gin.Context) {
 	} else {
 		fmt.Println("user", user)
 	}
-	ctx.JSON(http.StatusOK, gin.H{"session": session, "user": user})
+	accessToken, err := s.service.GenerateAccessToken(ctx, session.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"session": session, "user": user, "access_token": accessToken})
 }
 
 func (s *AuthHandler) LogOut(ctx *gin.Context) {
-	userID := ctx.Param("user_id")
-	err := s.service.LogOut(ctx, userID)
+	userID, err := uuid.Parse(ctx.Param("user_id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+	err = s.service.LogOut(ctx, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -167,23 +192,34 @@ func (s *AuthHandler) LogOut(ctx *gin.Context) {
 }
 
 func (s *AuthHandler) DeleteUserByID(ctx *gin.Context) {
-	userID := ctx.Param("user_id")
-	err := s.service.DeleteUserByID(ctx, userID)
+	userID, err := uuid.Parse(ctx.Param("user_id"))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error() + userID})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+	err = s.service.DeleteUserByID(ctx, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error() + userID.String()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"status": "success"})
 }
 
-func (s *AuthHandler) CheckToken(ctx *gin.Context) {
-	tokenString := ctx.GetHeader("Authorization")
-	fmt.Println(tokenString)
-	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
-	user_id, err := s.service.ValidateJWTToken(ctx, tokenString)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+func (s *AuthHandler) Refresh(ctx *gin.Context) {
+	var request struct {
+		UserId       uuid.UUID `json:"user_id"`
+		RefreshToken string    `json:"refresh_token"`
+	}
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"user_id": user_id})
+
+	accessToken, err := s.service.Refresh(ctx.Request.Context(), request.RefreshToken, request.UserId)
+	if err != nil {
+		log.Printf("failed to refresh token: %v", err)
+		ctx.JSON(http.StatusUnauthorized, "")
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"access_token": accessToken})
 }

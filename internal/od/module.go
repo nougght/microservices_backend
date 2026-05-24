@@ -30,7 +30,7 @@ func NewODModule(db *sqlx.DB) *ODModule {
 	}
 }
 
-func (m *ODModule) RegisterRoutes(r *gin.Engine) {
+func (m *ODModule) RegisterRoutes(r *gin.RouterGroup) {
 	orderHandler := handlers.NewOrderHandler(m.orderService, m.orderItemsService, m.deliveryService)
 	orderItemsHandler := handlers.NewOrderItemsHandler(m.orderItemsService)
 	deliveryHandler := handlers.NewDeliveryHandler(m.deliveryService)

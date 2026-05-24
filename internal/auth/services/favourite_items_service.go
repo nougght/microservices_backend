@@ -4,6 +4,8 @@ import (
 	"context"
 	"store-server/internal/auth/models"
 	"store-server/internal/auth/repositories"
+
+	"github.com/google/uuid"
 )
 
 type FavouriteItemsService struct {
@@ -18,10 +20,10 @@ func (s *FavouriteItemsService) AddToFavourites(ctx context.Context, item *model
 	return s.repo.AddToFavourites(ctx, item)
 }
 
-func (s *FavouriteItemsService) GetFavouritesByUserID(ctx context.Context, userID string) ([]models.FavouriteItem, error) {
+func (s *FavouriteItemsService) GetFavouritesByUserID(ctx context.Context, userID uuid.UUID) ([]models.FavouriteItem, error) {
 	return s.repo.GetFavouritesByUserID(ctx, userID)
 }
 
-func (s *FavouriteItemsService) DeleteFromFavourites(ctx context.Context, userID, productID string) error {
+func (s *FavouriteItemsService) DeleteFromFavourites(ctx context.Context, userID, productID uuid.UUID) error {
 	return s.repo.DeleteFromFavourites(ctx, userID, productID)
 }

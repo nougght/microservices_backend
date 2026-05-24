@@ -4,6 +4,8 @@ import (
 	"context"
 	"store-server/internal/category/models"
 	"store-server/internal/category/repositories"
+
+	"github.com/google/uuid"
 )
 
 type CategoryService struct {
@@ -26,6 +28,6 @@ func (s *CategoryService) UpdateCategory(ctx context.Context, category models.Ca
 	return s.repo.UpdateCategory(ctx, &category)
 }
 
-func (s *CategoryService) DeleteCategory(ctx context.Context, id string) error {
+func (s *CategoryService) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteCategory(ctx, id)
 }

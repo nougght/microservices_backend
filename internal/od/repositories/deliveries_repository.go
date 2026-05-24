@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"store-server/internal/od/models"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -16,7 +17,7 @@ func NewDeliveryRepository(db *sqlx.DB) *DeliveryRepository {
 	return &DeliveryRepository{db: db}
 }
 
-func (r *DeliveryRepository) GetDeliveryByID(ctx context.Context, ID string) (*models.Delivery, error) {
+func (r *DeliveryRepository) GetDeliveryByID(ctx context.Context, ID uuid.UUID) (*models.Delivery, error) {
 	var delivery models.Delivery
 	query := `SELECT * FROM OD.deliveries WHERE id = $1`
 	err := r.db.GetContext(ctx, &delivery, query, ID)
@@ -26,7 +27,7 @@ func (r *DeliveryRepository) GetDeliveryByID(ctx context.Context, ID string) (*m
 	return &delivery, nil
 }
 
-func (r *DeliveryRepository) GetDeliveryByOrderID(ctx context.Context, orderID string) (*models.Delivery, error) {
+func (r *DeliveryRepository) GetDeliveryByOrderID(ctx context.Context, orderID uuid.UUID) (*models.Delivery, error) {
 	var delivery models.Delivery
 	query := `SELECT * FROM OD.deliveries WHERE order_id = $1`
 	err := r.db.GetContext(ctx, &delivery, query, orderID)
@@ -37,12 +38,12 @@ func (r *DeliveryRepository) GetDeliveryByOrderID(ctx context.Context, orderID s
 	return &delivery, nil
 }
 
-func (r *DeliveryRepository) CreateDelivery(ctx context.Context, delivery *models.Delivery) (string, error) {
+func (r *DeliveryRepository) CreateDelivery(ctx context.Context, delivery *models.Delivery) (uuid.UUID, error) {
 	query := `INSERT INTO OD.deliveries (order_id, status, latitude, longitude, address, distance_km, package_weight, package_size, scheduled_at, delivered_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
-	var deliveryID string
+	var deliveryID uuid.UUID
 	err := r.db.QueryRowxContext(ctx, query, delivery.OrderID, delivery.Status, delivery.Latitude, delivery.Longitude, delivery.Adress, delivery.DistanceKM, delivery.PackageWeight, delivery.PackageSize, delivery.ScheduledAt, delivery.DeliveredAt).Scan(&deliveryID)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 	return deliveryID, nil
 }
@@ -56,7 +57,7 @@ func (r *DeliveryRepository) UpdateDelivery(ctx context.Context, delivery *model
 	return nil
 }
 
-func (r *DeliveryRepository) DeleteDelivery(ctx context.Context, ID string) error {
+func (r *DeliveryRepository) DeleteDelivery(ctx context.Context, ID uuid.UUID) error {
 	query := `DELETE FROM OD.deliveries WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, ID)
 	if err != nil {

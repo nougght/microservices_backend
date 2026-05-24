@@ -15,11 +15,6 @@ type CustomClaims struct {
 	jwt.StandardClaims
 }
 
-func IsValidUUID(u string) bool {
-	_, err := uuid.Parse(u)
-	return err == nil
-}
-
 func GenerateAuthCode() string {
 	n, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	code := fmt.Sprintf("%06d", n) // Добавляем ведущие нули
@@ -34,11 +29,15 @@ func NewJwtTools(secretKey string) *JwtTools {
 	return &JwtTools{secretKey: secretKey}
 }
 
-func (t *JwtTools) GenerateJWTToken(userId string) (string, error) {
+func (t *JwtTools) GenerateRefreshToken() string {
+	return rand.Text()
+}
+
+func (t *JwtTools) GenerateJWTToken(userId uuid.UUID) (string, error) {
 	claims := CustomClaims{
-		userId,
+		userId.String(),
 		jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 24 * 30).Unix(),
+			ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -49,27 +48,31 @@ func (t *JwtTools) GenerateJWTToken(userId string) (string, error) {
 	return tokenString, nil
 }
 
-func (t *JwtTools) ValidateJWTToken(tokenString string) (string, error) {
+func (t *JwtTools) ParseJWTToken(tokenString string) (uuid.UUID, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(t.secretKey), nil
 	})
+
 	if err != nil {
-		return "", err
+		return uuid.Nil, fmt.Errorf("invalid JWT: %w", err)
 	}
 	// fmt.Println("token", token)
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		userID, ok := claims["user_id"].(string)
-		fmt.Println(userID)
+		strId, ok := claims["user_id"].(string)
+		fmt.Println(strId)
 		if !ok {
-			return "", fmt.Errorf("invalid token")
+			return uuid.Nil, fmt.Errorf("invalid token")
 		}
-
-		return userID, nil
+		userId, err := uuid.Parse(strId)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("invalid userId in token")
+		}
+		return userId, nil
 	}
-	return "", fmt.Errorf("invalid token")
+	return uuid.Nil, fmt.Errorf("invalid token")
 }
 
 type SmsApi struct {

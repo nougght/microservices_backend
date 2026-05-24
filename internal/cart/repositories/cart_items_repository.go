@@ -4,6 +4,7 @@ import (
 	"context"
 	"store-server/internal/cart/models"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -21,7 +22,7 @@ func (r *CartItemsRepository) AddToCart(ctx context.Context, item *models.CartIt
 	return r.db.QueryRowxContext(ctx, query, item.CartID, item.ProductID, item.Quantity).StructScan(item)
 }
 
-func (r *CartItemsRepository) GetCartItemsByCartID(ctx context.Context, id string) ([]models.CartItem, error) {
+func (r *CartItemsRepository) GetCartItemsByCartID(ctx context.Context, id uuid.UUID) ([]models.CartItem, error) {
 	var cartItems []models.CartItem
 
 	err := r.db.SelectContext(ctx, &cartItems, "SELECT * FROM carts.cart_items WHERE cart_id = $1 ORDER BY added_at ASC", id)
@@ -31,19 +32,19 @@ func (r *CartItemsRepository) GetCartItemsByCartID(ctx context.Context, id strin
 	return cartItems, nil
 }
 
-func (r *CartItemsRepository) UpdateCartItemQuantity(ctx context.Context, id string, quantity int) error {
+func (r *CartItemsRepository) UpdateCartItemQuantity(ctx context.Context, id uuid.UUID, quantity int) error {
 	query := `UPDATE carts.cart_items SET quantity = $1 WHERE id = $2`
 	_, err := r.db.ExecContext(ctx, query, quantity, id)
 	return err
 }
 
-func (r *CartItemsRepository) DeleteFromCartById(ctx context.Context, id string) error {
+func (r *CartItemsRepository) DeleteFromCartById(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM carts.cart_items WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
 }
 
-func (r *CartItemsRepository) DeleteItemsByIDs(ctx context.Context, ids []string) error {
+func (r *CartItemsRepository) DeleteItemsByIDs(ctx context.Context, ids []uuid.UUID) error {
 	query := `DELETE FROM carts.cart_items WHERE id = ANY($1)`
 	_, err := r.db.ExecContext(ctx, query, pq.Array(ids))
 	return err

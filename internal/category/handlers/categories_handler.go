@@ -12,16 +12,16 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/nfnt/resize"
 )
 
 type CategoryHandler struct {
 	service *services.CategoryService
-	tools   *models.Tools
 }
 
 func NewCategoryHandler(service *services.CategoryService) *CategoryHandler {
-	return &CategoryHandler{service: service, tools: &models.Tools{}}
+	return &CategoryHandler{service: service}
 }
 
 func (h *CategoryHandler) PostCategory(c *gin.Context) {
@@ -124,7 +124,12 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	category.ID = c.Param("id")
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+	category.ID = id
 	if err := h.service.UpdateCategory(c.Request.Context(), category); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update category"})
 		return
@@ -133,8 +138,8 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 }
 
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
-	id := c.Param("id")
-	if !h.tools.IsValidUUID(id) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}

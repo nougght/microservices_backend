@@ -24,7 +24,7 @@ func NewProductModule(db *sqlx.DB) *ProductModule {
 	}
 }
 
-func (m *ProductModule) RegisterRoutes(r *gin.Engine) {
+func (m *ProductModule) RegisterRoutes(r *gin.RouterGroup) {
 	productHandler := handlers.NewProductsHandler(m.ProductService)
 
 	r.GET("/products", productHandler.GetProducts)

@@ -8,17 +8,17 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	js "encoding/json"
 )
 
 type ProductsHandler struct {
 	service *services.ProductsService
-	tools   *models.Tools
 }
 
 func NewProductsHandler(service *services.ProductsService) *ProductsHandler {
-	return &ProductsHandler{service: service, tools: &models.Tools{}}
+	return &ProductsHandler{service: service}
 }
 
 func (h *ProductsHandler) GetProducts(c *gin.Context) {
@@ -54,14 +54,17 @@ func (h *ProductsHandler) GetProducts(c *gin.Context) {
 	} else {
 		ids := strings.Split(idsParam, ",")
 
-		for _, id := range ids {
-			if !h.tools.IsValidUUID(id) {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format" + id})
+		uuids := make([]uuid.UUID, len(ids))
+		for i, id := range ids {
+			parsedID, err := uuid.Parse(id)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 				return
 			}
+			uuids[i] = parsedID
 		}
 
-		products, err = h.service.GetProductByIDs(c.Request.Context(), ids)
+		products, err = h.service.GetProductByIDs(c.Request.Context(), uuids)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve products" + err.Error()})
 			return
@@ -82,15 +85,18 @@ func (h *ProductsHandler) GetProductsByIDs(c *gin.Context) {
 	// Разделяем строку на массив ID
 	ids := strings.Split(idsParam, ",")
 
-	for _, id := range ids {
-		if h.tools.IsValidUUID(id) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format" + id})
+	uuids := make([]uuid.UUID, len(ids))
+	for i, id := range ids {
+		parsedID, err := uuid.Parse(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 			return
 		}
+		uuids[i] = parsedID
 	}
 
 	// Получаем товары из БД
-	products, err := h.service.GetProductByIDs(c.Request.Context(), ids)
+	products, err := h.service.GetProductByIDs(c.Request.Context(), uuids)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -115,9 +121,9 @@ func (h *ProductsHandler) CreateProduct(c *gin.Context) {
 }
 
 func (h *ProductsHandler) UpdateProduct(c *gin.Context) {
-	id := c.Param("id")
+	id, err := uuid.Parse(c.Param("id"))
 
-	if !h.tools.IsValidUUID(id) {
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
@@ -136,7 +142,12 @@ func (h *ProductsHandler) UpdateProduct(c *gin.Context) {
 }
 
 func (h *ProductsHandler) DeleteProduct(c *gin.Context) {
-	id := c.Param("id")
+	id, err := uuid.Parse(c.Param("id"))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
 	if err := h.service.DeleteProduct(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

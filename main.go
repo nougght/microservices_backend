@@ -5,6 +5,8 @@ import (
 	"store-server/config"
 	"store-server/database"
 	"store-server/internal/auth"
+	"store-server/internal/auth/middleware"
+	"store-server/internal/auth/tools"
 	"store-server/internal/cart"
 	"store-server/internal/category"
 	"store-server/internal/minio"
@@ -15,6 +17,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
+
+// TODO: переделать сомнительные моменты
 
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
@@ -46,7 +50,8 @@ func main() {
 
 	r.RedirectTrailingSlash = false
 
-	authModule := auth.NewAuthModule(cfg, db)
+	jwtTools := tools.NewJwtTools(cfg.Jwt.SecretKey)
+	authModule := auth.NewAuthModule(cfg, db, jwtTools)
 	productModule := product.NewProductModule(db)
 	cartModule := cart.NewCartModule(db)
 	categoryModule := category.NewCategoryModule(db)
@@ -57,14 +62,21 @@ func main() {
 		return
 	}
 
-	authModule.RegisterRoutes(r)
-	productModule.RegisterRoutes(r)
-	cartModule.RegisterRoutes(r)
-	categoryModule.RegisterRoutes(r)
-	minioModule.RegisterRoutes(r)
-	odModule.RegisterRoutes(r)
+	public := r.Group("/")
+	private := r.Group("/")
+	private.Use(middleware.AccessTokenAuthMiddleware(jwtTools))
+	// маршруты без аутентификации
+	authModule.RegisterPublicRoutes(public)
 
-	r.GET("/health", func(c *gin.Context) {
+	// все остальные c jwt
+	authModule.RegisterPrivateRoutes(private)
+	productModule.RegisterRoutes(private)
+	cartModule.RegisterRoutes(private)
+	categoryModule.RegisterRoutes(private)
+	minioModule.RegisterRoutes(private)
+	odModule.RegisterRoutes(private)
+
+	public.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 

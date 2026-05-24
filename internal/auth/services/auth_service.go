@@ -2,12 +2,16 @@ package services
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"store-server/config"
 	"store-server/internal/auth/models"
 	"store-server/internal/auth/repositories"
 	"store-server/internal/auth/smtp"
 	"store-server/internal/auth/tools"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type AuthService struct {
@@ -18,24 +22,24 @@ type AuthService struct {
 	yandexCfg *config.YandexMapkitConfig
 }
 
-func NewAuthService(cfg *config.Config, repo *repositories.AuthRepository) *AuthService {
+func NewAuthService(cfg *config.Config, repo *repositories.AuthRepository, jwtTools *tools.JwtTools) *AuthService {
 	return &AuthService{repo: repo, smtp: smtp.NewSMTPClient(cfg.SMTP), smsSender: nil,
-		tools: tools.NewJwtTools(cfg.Jwt.SecretKey), yandexCfg: cfg.YandexMapkit}
+		tools: jwtTools, yandexCfg: cfg.YandexMapkit}
 }
 
 func (s *AuthService) GetYandexAPIKey(ctx context.Context) (string, error) {
 	return s.yandexCfg.APIKey, nil
 }
 
-func (s *AuthService) CheckUserExists(ctx context.Context, emailOrPhone string) (string, error) {
+func (s *AuthService) CheckUserExists(ctx context.Context, emailOrPhone string) (uuid.UUID, error) {
 	return s.repo.CheckUserExists(ctx, emailOrPhone)
 }
 
-func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
+func (s *AuthService) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
 	return s.repo.GetUserByID(ctx, userID)
 }
 
-func (s *AuthService) DeleteUserByID(ctx context.Context, userID string) error {
+func (s *AuthService) DeleteUserByID(ctx context.Context, userID uuid.UUID) error {
 	return s.repo.DeleteUserByID(ctx, userID)
 }
 func (s *AuthService) SendCode(ctx context.Context, recipient string, code *models.AuthCode) error {
@@ -71,8 +75,8 @@ func (s *AuthService) VerifyCode(ctx context.Context, recipient string, code str
 	return true, nil
 }
 
-func (s *AuthService) ValidateJWTToken(ctx context.Context, token string) (string, error) {
-	return s.tools.ValidateJWTToken(token)
+func (s *AuthService) GenerateAccessToken(ctx context.Context, userId uuid.UUID) (string, error) {
+	return s.tools.GenerateJWTToken(userId)
 }
 
 func (s *AuthService) LogIn(ctx context.Context, user *models.User, code *models.AuthCode) (*models.Session, error) {
@@ -83,19 +87,18 @@ func (s *AuthService) LogIn(ctx context.Context, user *models.User, code *models
 	if !isValid {
 		return nil, fmt.Errorf("invalid code")
 	}
-	token, err := s.tools.GenerateJWTToken(user.UserID)
-	if err != nil {
-		return nil, err
-	}
+	refreshToken := s.tools.GenerateRefreshToken()
 
 	session := &models.Session{
-		UserID: user.UserID,
-		Token:  token,
+		UserID:    user.UserID,
+		Token:     fmt.Sprintf("%x", sha256.Sum256([]byte(refreshToken))),
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 30),
 	}
 	err = s.repo.CreateSession(ctx, session)
 	if err != nil {
 		return nil, err
 	}
+	session.Token = refreshToken
 	code.Used = true
 	code.UserID = user.UserID
 	err = s.repo.UpdateAuthCode(ctx, code)
@@ -113,12 +116,9 @@ func (s *AuthService) Register(ctx context.Context, user *models.User, code *mod
 	if !isValid {
 		return nil, fmt.Errorf("invalid code")
 	}
-	token, err := s.tools.GenerateJWTToken(user.UserID)
-	if err != nil {
-		return nil, err
-	}
+	refreshToken := s.tools.GenerateRefreshToken()
 	err = s.repo.CreateUser(ctx, user)
-	if user.UserID == "" {
+	if user.UserID == uuid.Nil {
 		s.repo.DeleteUserByID(ctx, user.UserID)
 		return nil, fmt.Errorf("user not created")
 	}
@@ -128,15 +128,18 @@ func (s *AuthService) Register(ctx context.Context, user *models.User, code *mod
 	}
 
 	session := &models.Session{
-		UserID: user.UserID,
-		Token:  token,
+		UserID:    user.UserID,
+		Token:     fmt.Sprintf("%x", sha256.Sum256([]byte(refreshToken))),
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 30),
 	}
+
 	fmt.Println("session", session, "user", user)
 	err = s.repo.CreateSession(ctx, session)
 	if err != nil {
 		s.repo.DeleteUserByID(ctx, user.UserID)
 		return nil, err
 	}
+	session.Token = refreshToken
 	code.Used = true
 	code.UserID = user.UserID
 	err = s.repo.UpdateAuthCode(ctx, code)
@@ -146,7 +149,7 @@ func (s *AuthService) Register(ctx context.Context, user *models.User, code *mod
 	return session, nil
 }
 
-func (s *AuthService) LogOut(ctx context.Context, userID string) error {
+func (s *AuthService) LogOut(ctx context.Context, userID uuid.UUID) error {
 	session, err := s.repo.GetSessionByUserID(ctx, userID)
 	if err != nil {
 		return err
@@ -158,6 +161,26 @@ func (s *AuthService) LogOut(ctx context.Context, userID string) error {
 	return nil
 }
 
-func (s *AuthService) GetSessionByUserID(ctx context.Context, userID string) (*models.Session, error) {
-	return s.repo.GetSessionByUserID(ctx, userID)
+func (s *AuthService) Refresh(ctx context.Context, refreshToken string, userId uuid.UUID) (*string, error) {
+	session, err := s.repo.GetSessionByUserID(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("refresh: %w", err)
+	}
+	if session.ExpiresAt.Before(time.Now()) || fmt.Sprintf("%x", sha256.Sum256([]byte(refreshToken))) != session.Token {
+		return nil, fmt.Errorf("invalid refresh token")
+	}
+	newAccessToken, err := s.tools.GenerateJWTToken(userId)
+	if err != nil {
+		return nil, fmt.Errorf("refresh: %w", err)
+	}
+	return &newAccessToken, nil
+}
+
+func (s *AuthService) GetSessionByUserID(ctx context.Context, userID uuid.UUID) (*models.Session, error) {
+	session, err := s.repo.GetSessionByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get session: %w", err)
+	}
+	session.Token = ""
+	return session, nil
 }

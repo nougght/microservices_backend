@@ -24,7 +24,7 @@ func NewCategoryModule(db *sqlx.DB) *CategoryModule {
 	}
 }
 
-func (m *CategoryModule) RegisterRoutes(r *gin.Engine) {
+func (m *CategoryModule) RegisterRoutes(r *gin.RouterGroup) {
 	categoryHandler := handlers.NewCategoryHandler(m.CategoryService)
 
 	r.GET("/categories", categoryHandler.GetCategories)

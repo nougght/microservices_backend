@@ -29,7 +29,7 @@ func NewCartModule(db *sqlx.DB) *CartModule {
 	}
 }
 
-func (m *CartModule) RegisterRoutes(r *gin.Engine) {
+func (m *CartModule) RegisterRoutes(r *gin.RouterGroup) {
 	cartHandler := handlers.NewCartHandler(m.CartService)
 	cartItemsHandler := handlers.NewCartItemsHandler(m.CartItemsService)
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"store-server/internal/cart/models"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -15,7 +16,7 @@ func NewCartRepository(db *sqlx.DB) *CartRepository {
 	return &CartRepository{db: db}
 }
 
-func (r *CartRepository) GetCartByUserID(ctx context.Context, userID string) (*models.Cart, error) {
+func (r *CartRepository) GetCartByUserID(ctx context.Context, userID uuid.UUID) (*models.Cart, error) {
 	var cart models.Cart
 	query := `SELECT * FROM carts.carts WHERE user_id = $1`
 	err := r.db.GetContext(ctx, &cart, query, userID)
@@ -25,9 +26,9 @@ func (r *CartRepository) GetCartByUserID(ctx context.Context, userID string) (*m
 	return &cart, nil
 }
 
-func (r *CartRepository) CreateCart(ctx context.Context, userID string) (string, error) {
+func (r *CartRepository) CreateCart(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) {
 	query := `INSERT INTO carts.carts (user_id) VALUES ($1) returning cart_id`
-	var cartID string
+	var cartID uuid.UUID
 	err := r.db.QueryRowxContext(ctx, query, userID).Scan(&cartID)
 	return cartID, err
 }

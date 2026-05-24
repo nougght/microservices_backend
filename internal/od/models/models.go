@@ -7,8 +7,8 @@ import (
 )
 
 type Order struct {
-	ID            string      `db:"id" json:"id"`
-	UserID        string      `db:"user_id" json:"user_id"`
+	ID            uuid.UUID   `db:"id" json:"id"`
+	UserID        uuid.UUID   `db:"user_id" json:"user_id"`
 	Status        string      `db:"status" json:"status"`
 	TotalPrice    float64     `db:"total_price" json:"total_price"`
 	DeliveryPrice float64     `db:"delivery_price" json:"delivery_price"`
@@ -20,17 +20,17 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID        string  `db:"id" json:"id"`
-	OrderID   string  `db:"order_id" json:"order_id"`
-	ProductID string  `db:"product_id" json:"product_id"`
-	Quantity  int     `db:"quantity" json:"quantity"`
-	Price     float64 `db:"price" json:"price"`
-	Weight    float64 `db:"weight" json:"weight"`
+	ID        uuid.UUID `db:"id" json:"id"`
+	OrderID   uuid.UUID `db:"order_id" json:"order_id"`
+	ProductID uuid.UUID `db:"product_id" json:"product_id"`
+	Quantity  int       `db:"quantity" json:"quantity"`
+	Price     float64   `db:"price" json:"price"`
+	Weight    float64   `db:"weight" json:"weight"`
 }
 
 type Delivery struct {
-	ID            string    `db:"id" json:"id"`
-	OrderID       string    `db:"order_id" json:"order_id"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	OrderID       uuid.UUID `db:"order_id" json:"order_id"`
 	Latitude      float64   `db:"latitude" json:"latitude"`
 	Longitude     float64   `db:"longitude" json:"longitude"`
 	Adress        string    `db:"address" json:"address"`
@@ -40,11 +40,4 @@ type Delivery struct {
 	Status        string    `db:"status" json:"status"`
 	ScheduledAt   time.Time `db:"scheduled_at" json:"scheduled_at"`
 	DeliveredAt   time.Time `db:"delivered_at" json:"delivered_at"`
-}
-
-type Tools struct{}
-
-func (t *Tools) IsValidUUID(u string) bool {
-	_, err := uuid.Parse(u)
-	return err == nil
 }

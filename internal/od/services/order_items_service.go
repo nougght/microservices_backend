@@ -4,6 +4,8 @@ import (
 	"context"
 	"store-server/internal/od/models"
 	"store-server/internal/od/repositories"
+
+	"github.com/google/uuid"
 )
 
 type OrderItemsService struct {
@@ -22,11 +24,11 @@ func (s *OrderItemsService) CreateOrderItems(ctx context.Context, items []models
 	return s.repo.CreateOrderItems(ctx, items)
 }
 
-func (s *OrderItemsService) GetOrderItemByID(ctx context.Context, id string) (*models.OrderItem, error) {
+func (s *OrderItemsService) GetOrderItemByID(ctx context.Context, id uuid.UUID) (*models.OrderItem, error) {
 	return s.repo.GetOrderItemByID(ctx, id)
 }
 
-func (s *OrderItemsService) GetOrderItemsByOrderID(ctx context.Context, id string) ([]models.OrderItem, error) {
+func (s *OrderItemsService) GetOrderItemsByOrderID(ctx context.Context, id uuid.UUID) ([]models.OrderItem, error) {
 	return s.repo.GetOrderItemsByOrderID(ctx, id)
 }
 
@@ -34,6 +36,6 @@ func (s *OrderItemsService) UpdateOrderItem(ctx context.Context, item *models.Or
 	return s.repo.UpdateOrderItem(ctx, *item)
 }
 
-func (s *OrderItemsService) DeleteOrderItem(ctx context.Context, id string) error {
+func (s *OrderItemsService) DeleteOrderItem(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteOrderItem(ctx, id)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"store-server/internal/od/models"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -48,7 +49,7 @@ func (r *OrderItemsRepository) CreateOrderItems(ctx context.Context, items []mod
 	return nil
 }
 
-func (r *OrderItemsRepository) GetOrderItemByID(ctx context.Context, id string) (*models.OrderItem, error) {
+func (r *OrderItemsRepository) GetOrderItemByID(ctx context.Context, id uuid.UUID) (*models.OrderItem, error) {
 	var orderItem models.OrderItem
 	query := `SELECT * FROM OD.order_items WHERE id = $1`
 	err := r.db.GetContext(ctx, &orderItem, query, id)
@@ -58,7 +59,7 @@ func (r *OrderItemsRepository) GetOrderItemByID(ctx context.Context, id string) 
 	return &orderItem, nil
 }
 
-func (r *OrderItemsRepository) GetOrderItemsByOrderID(ctx context.Context, order_id string) ([]models.OrderItem, error) {
+func (r *OrderItemsRepository) GetOrderItemsByOrderID(ctx context.Context, order_id uuid.UUID) ([]models.OrderItem, error) {
 	var orderItems []models.OrderItem
 	query := `SELECT * FROM OD.order_items WHERE order_id = $1`
 	err := r.db.SelectContext(ctx, &orderItems, query, order_id)
@@ -75,7 +76,7 @@ func (r *OrderItemsRepository) UpdateOrderItem(ctx context.Context, orderItem mo
 	return err
 }
 
-func (r *OrderItemsRepository) DeleteOrderItem(ctx context.Context, id string) error {
+func (r *OrderItemsRepository) DeleteOrderItem(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM OD.order_items WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err

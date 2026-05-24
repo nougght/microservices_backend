@@ -6,15 +6,15 @@ import (
 	"store-server/internal/od/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type OrderItemsHandler struct {
 	service *services.OrderItemsService
-	tools   *models.Tools
 }
 
 func NewOrderItemsHandler(service *services.OrderItemsService) *OrderItemsHandler {
-	return &OrderItemsHandler{service: service, tools: &models.Tools{}}
+	return &OrderItemsHandler{service: service}
 }
 
 func (h *OrderItemsHandler) CreateOrderItem(c *gin.Context) {
@@ -48,9 +48,9 @@ func (h *OrderItemsHandler) CreateOrderItems(c *gin.Context) {
 }
 
 func (h *OrderItemsHandler) GetOrderItemsByOrderID(c *gin.Context) {
-	orderID := c.Param("id")
-	if !h.tools.IsValidUUID(orderID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order ID" + orderID})
+	orderID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order ID"})
 		return
 	}
 
@@ -64,9 +64,9 @@ func (h *OrderItemsHandler) GetOrderItemsByOrderID(c *gin.Context) {
 }
 
 func (h *OrderItemsHandler) GetOrderItemByID(c *gin.Context) {
-	itemID := c.Param("id")
-	if !h.tools.IsValidUUID(itemID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID" + itemID})
+	itemID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID"})
 		return
 	}
 
@@ -80,9 +80,9 @@ func (h *OrderItemsHandler) GetOrderItemByID(c *gin.Context) {
 }
 
 func (h *OrderItemsHandler) UpdateOrderItem(c *gin.Context) {
-	id := c.Param("id")
-	if !h.tools.IsValidUUID(id) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID" + id})
+	_, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID"})
 		return
 	}
 
@@ -101,9 +101,9 @@ func (h *OrderItemsHandler) UpdateOrderItem(c *gin.Context) {
 }
 
 func (h *OrderItemsHandler) DeleteOrderItem(c *gin.Context) {
-	id := c.Param("id")
-	if !h.tools.IsValidUUID(id) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID" + id})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID"})
 		return
 	}
 

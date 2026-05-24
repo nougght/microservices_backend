@@ -28,7 +28,7 @@ func NewMinioModule(cfg *config.MinioConfig, db *sqlx.DB) (*MinioModule, error) 
 	return &MinioModule{minioClient: minioClient}, nil
 }
 
-func (m *MinioModule) RegisterRoutes(r *gin.Engine) {
+func (m *MinioModule) RegisterRoutes(r *gin.RouterGroup) {
 	minioHandler := handlers.NewMinioHandler(m.minioClient)
 
 	r.GET("/products/:id/images/:number/upload_url/:ext", minioHandler.GetProductUploadURL) // получить PUT presigned URL

@@ -4,6 +4,8 @@ import (
 	"context"
 	"store-server/internal/cart/models"
 	"store-server/internal/cart/repositories"
+
+	"github.com/google/uuid"
 )
 
 type CartItemsService struct {
@@ -18,18 +20,18 @@ func (s *CartItemsService) AddToCart(ctx context.Context, item *models.CartItem)
 	return s.repo.AddToCart(ctx, item)
 }
 
-func (s *CartItemsService) GetCartItemsByCartID(ctx context.Context, id string) ([]models.CartItem, error) {
+func (s *CartItemsService) GetCartItemsByCartID(ctx context.Context, id uuid.UUID) ([]models.CartItem, error) {
 	return s.repo.GetCartItemsByCartID(ctx, id)
 }
 
-func (s *CartItemsService) UpdateCartItemQuantity(ctx context.Context, id string, quantity int) error {
+func (s *CartItemsService) UpdateCartItemQuantity(ctx context.Context, id uuid.UUID, quantity int) error {
 	return s.repo.UpdateCartItemQuantity(ctx, id, quantity)
 }
 
-func (s *CartItemsService) DeleteFromCartById(ctx context.Context, id string) error {
+func (s *CartItemsService) DeleteFromCartById(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteFromCartById(ctx, id)
 }
 
-func (s *CartItemsService) DeleteItemsByIDs(ctx context.Context, ids []string) error {
+func (s *CartItemsService) DeleteItemsByIDs(ctx context.Context, ids []uuid.UUID) error {
 	return s.repo.DeleteItemsByIDs(ctx, ids)
 }
